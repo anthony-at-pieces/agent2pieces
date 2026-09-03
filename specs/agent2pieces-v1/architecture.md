@@ -301,6 +301,7 @@ SQLite runs in WAL mode with foreign keys enabled, a 5-second busy timeout, expl
 - `safety_findings(finding_id PRIMARY KEY, candidate_id, candidate_version, reason_code, severity, line_number, state, override_reason, override_at, created_at)`.
 - `duplicate_checks(check_id PRIMARY KEY, candidate_id, candidate_version, coverage, started_at, finished_at, verdict, error_detail)`.
 - `duplicate_evidence(evidence_id PRIMARY KEY, check_id, target_kind, target_key, target_title, target_excerpt, payload_hash, cosine, body_shingle_jaccard, title_jaccard, classification, rule_id, remote_rank)`.
+- `duplicate_evidence_candidates(evidence_id, candidate_id, candidate_version, target_key, target_title, PRIMARY KEY(evidence_id, candidate_id, candidate_version))`.
 - `review_groups(group_id PRIMARY KEY, title, representative_candidate_id, status, version, created_from_check_id, representative_overridden, created_at, updated_at)`.
 - `review_group_evidence(group_id, evidence_id, PRIMARY KEY(group_id, evidence_id))`.
 - `import_jobs(job_id PRIMARY KEY, state, requested_at, started_at, finished_at, current_ordinal, remote_search_available, duplicate_risk_acknowledged_at, duplicate_risk_ack_text_version, pause_reason, error_detail)`.

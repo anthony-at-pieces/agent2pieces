@@ -398,12 +398,16 @@ async def test_group_representative_and_decision_transitions_are_optimistic(
             group_id=group.group_id,
             expected_version=group.version,
             action="approve",
+            acting_candidate_id=first.candidate_id,
+            expected_candidate_version=first.version,
         )
 
     approved = review.update_group(
         group_id=group.group_id,
         expected_version=changed.version,
         action="approve",
+        acting_candidate_id=first.candidate_id,
+        expected_candidate_version=first.version,
     )
     assert approved.status is GroupStatus.APPROVED
     members = ledger.connection.execute(
@@ -447,6 +451,8 @@ async def test_excluding_group_excludes_every_member(ledger: Ledger) -> None:
         group_id=group.group_id,
         expected_version=group.version,
         action="exclude",
+        acting_candidate_id=first.candidate_id,
+        expected_candidate_version=first.version,
     )
 
     assert excluded.status is GroupStatus.EXCLUDED
@@ -454,3 +460,69 @@ async def test_excluding_group_excludes_every_member(ledger: Ledger) -> None:
         "SELECT DISTINCT status FROM candidates WHERE group_id = ?", (group.group_id,)
     ).fetchall()
     assert [row["status"] for row in states] == [CandidateStatus.EXCLUDED]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("action", ["approve", "exclude"])
+async def test_group_decisions_require_acting_candidate_binding(
+    ledger: Ledger,
+    action: str,
+) -> None:
+    body = "Require candidate binding for every duplicate group decision."
+    first = add_candidate(
+        ledger,
+        payload=CandidatePayload(title="Bound group decision", markdown_body=body),
+        source_key="first.md",
+        source_path="/codex/first.md",
+    )
+    second = add_candidate(
+        ledger,
+        payload=CandidatePayload(title="Bound group decision", markdown_body=body),
+        source_key="second.md",
+        source_path="/codex/second.md",
+    )
+    review = ReviewService(ledger)
+    report = await review.check_duplicates(
+        candidate_ids=(first.candidate_id, second.candidate_id),
+        candidate_versions={
+            first.candidate_id: first.version,
+            second.candidate_id: second.version,
+        },
+    )
+    suggestion = report.suggested_groups[0]
+    group = review.create_group(
+        check_id=report.check_id,
+        title="Bound group decision",
+        member_candidate_ids=suggestion.member_candidate_ids,
+        evidence_ids=suggestion.evidence_ids,
+    )
+    member_state = {
+        candidate_id: (
+            ledger.get_candidate(candidate_id).status,
+            ledger.get_candidate(candidate_id).version,
+        )
+        for candidate_id in suggestion.member_candidate_ids
+    }
+
+    with pytest.raises(
+        InvalidStateError,
+        match="acting candidate and version are required",
+    ):
+        review.update_group(
+            group_id=group.group_id,
+            expected_version=group.version,
+            action=action,
+        )
+
+    persisted_group = ledger._get_review_group(group.group_id)
+    assert (persisted_group.status, persisted_group.version) == (
+        group.status,
+        group.version,
+    )
+    assert {
+        candidate_id: (
+            ledger.get_candidate(candidate_id).status,
+            ledger.get_candidate(candidate_id).version,
+        )
+        for candidate_id in suggestion.member_candidate_ids
+    } == member_state

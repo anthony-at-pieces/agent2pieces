@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
+import pytest
 from playwright.sync_api import Page, expect
 
 
@@ -81,6 +82,35 @@ def test_duplicate_group_uses_scored_default_and_allows_representative_override(
         "sparse"
     ]
     assert persisted["representative_overridden"] == 1
+
+
+@pytest.mark.parametrize(
+    ("action", "expected_status"),
+    [("Approve group", "approved"), ("Exclude group", "excluded")],
+)
+def test_duplicate_group_decisions_are_visible_and_render_the_resulting_status(
+    browser_page: Page,
+    browser_harness: Any,
+    action: str,
+    expected_status: str,
+) -> None:
+    page = browser_page
+    _open(page, browser_harness)
+    _open_candidate(page, "Dispatch boundary")
+    page.locator("#duplicate-check").click()
+    expect(page.locator("#duplicate-verdict")).to_have_text("likely")
+    page.locator("#create-group").click()
+    expect(page.locator("#live-message")).to_have_text("Duplicate group created.")
+
+    group_action = page.get_by_role("button", name=action, exact=True)
+    expect(group_action).to_be_visible()
+    group_action.click()
+
+    expect(page.locator("#duplicate-group")).to_contain_text(expected_status)
+    persisted = browser_harness.ledger.connection.execute(
+        "SELECT status FROM review_groups"
+    ).fetchone()
+    assert persisted["status"] == expected_status
 
 
 def test_apply_requires_fresh_confirmation_and_cancel_never_posts(

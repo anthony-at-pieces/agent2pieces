@@ -326,6 +326,68 @@ async def test_marker_search_requires_exact_standalone_line_and_groups_parent(
 
 
 @pytest.mark.asyncio
+async def test_marker_search_accepts_live_empty_results_envelope(
+    mcp_api: ModuleType,
+) -> None:
+    server = FakeMcpServer([write_tool(), search_tool()])
+    server.queue(
+        "annotations_full_text_search",
+        tool_result(
+            {
+                "results": [],
+                "total": 0,
+                "limit": 50,
+                "query": MARKER,
+                "format": "detailed",
+            },
+            as_text=True,
+        ),
+    )
+    client = await connected_client(mcp_api, server)
+
+    result = await client.search_marker(IMPORT_ID)
+
+    assert (result.outcome, result.coverage) == ("absent", "complete")
+
+
+@pytest.mark.asyncio
+async def test_marker_search_extracts_parent_from_live_results_envelope(
+    mcp_api: ModuleType,
+) -> None:
+    parent_memory_id = "123e4567-e89b-42d3-a456-426614174000"
+    server = FakeMcpServer([write_tool(), search_tool()])
+    server.queue(
+        "annotations_full_text_search",
+        tool_result(
+            {
+                "results": [
+                    {
+                        "annotation": {
+                            "id": "123e4567-e89b-42d3-a456-426614174001",
+                            "text": MARKER,
+                            "summaries": {"indices": {parent_memory_id: 0}},
+                        }
+                    }
+                ],
+                "total": 1,
+                "limit": 50,
+                "query": MARKER,
+                "format": "detailed",
+            },
+            as_text=True,
+        ),
+    )
+    client = await connected_client(mcp_api, server)
+
+    result = await client.search_marker(IMPORT_ID)
+
+    assert (result.outcome, result.parent_memory_ids) == (
+        "one_parent",
+        (parent_memory_id,),
+    )
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     ("records", "expected_outcome", "expected_parents"),
     [

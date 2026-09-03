@@ -296,6 +296,13 @@ def _parent_id(record: dict[str, Any]) -> str | None:
         value = _nested_scalar(record, *path)
         if value is not None:
             return value
+    annotation = record.get("annotation")
+    summaries = annotation.get("summaries") if isinstance(annotation, dict) else None
+    indices = summaries.get("indices") if isinstance(summaries, dict) else None
+    if isinstance(indices, dict) and len(indices) == 1:
+        parent_id = next(iter(indices))
+        if isinstance(parent_id, str) and parent_id.strip():
+            return parent_id
     return None
 
 
@@ -734,6 +741,33 @@ class PiecesMcpClient:
                 async with asyncio.timeout(self._search_timeout_seconds):
                     result = await session.call_tool(_SEARCH_TOOL, arguments)
                 payload = _result_payload(result)
+                if "results" in payload and "annotations" not in payload:
+                    results = payload.get("results")
+                    total = payload.get("total")
+                    limit = payload.get("limit")
+                    query = payload.get("query")
+                    format_value = payload.get("format")
+                    if (
+                        not isinstance(results, list)
+                        or any(not isinstance(record, dict) for record in results)
+                        or not isinstance(total, int)
+                        or isinstance(total, bool)
+                        or total < 0
+                        or not isinstance(limit, int)
+                        or isinstance(limit, bool)
+                        or limit <= 0
+                        or not isinstance(query, str)
+                        or not isinstance(format_value, str)
+                    ):
+                        raise ValueError("annotation search response is malformed")
+                    truncated = total > len(results)
+                    return _AnnotationPage(
+                        records=tuple(cast(dict[str, Any], record) for record in results),
+                        complete=not truncated,
+                        has_more=False,
+                        next_cursor=None,
+                        truncated=truncated,
+                    )
                 annotations = payload.get("annotations")
                 if not isinstance(annotations, list) or any(
                     not isinstance(record, dict) for record in annotations

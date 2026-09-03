@@ -227,6 +227,7 @@ class Ledger:
         migrations = (
             (1, migration_root / "001_initial.sql"),
             (2, migration_root / "002_import_context.sql"),
+            (3, migration_root / "003_duplicate_evidence_candidates.sql"),
         )
         with self.transaction(exclusive=True) as connection:
             connection.execute(
@@ -672,8 +673,11 @@ class Ledger:
         self,
         *,
         check_id: str,
+        candidate_versions: Mapping[str, int],
         target_kind: str,
         target_key: str,
+        candidate_target_keys: Mapping[str, str] | None = None,
+        candidate_target_titles: Mapping[str, str | None] | None = None,
         classification: str,
         rule_id: str,
         cosine: float | None = None,
@@ -685,6 +689,18 @@ class Ledger:
         remote_rank: int | None = None,
     ) -> str:
         evidence_id = _uuid4()
+        owner_target_keys = dict.fromkeys(candidate_versions, target_key)
+        if candidate_target_keys is not None:
+            if set(candidate_target_keys) != set(candidate_versions):
+                raise InvalidStateError("candidate target keys must match evidence owners")
+            owner_target_keys.update(candidate_target_keys)
+        owner_target_titles: dict[str, str | None] = dict.fromkeys(
+            candidate_versions, target_title
+        )
+        if candidate_target_titles is not None:
+            if set(candidate_target_titles) != set(candidate_versions):
+                raise InvalidStateError("candidate target titles must match evidence owners")
+            owner_target_titles.update(candidate_target_titles)
         with self.transaction() as connection:
             connection.execute(
                 "INSERT INTO duplicate_evidence "
@@ -706,6 +722,23 @@ class Ledger:
                     rule_id,
                     remote_rank,
                 ),
+            )
+            connection.executemany(
+                "INSERT INTO duplicate_evidence_candidates "
+                "(evidence_id, candidate_id, candidate_version, target_key, target_title) "
+                "VALUES (?, ?, ?, ?, ?)",
+                [
+                    (
+                        evidence_id,
+                        candidate_id,
+                        candidate_version,
+                        owner_target_keys[candidate_id],
+                        owner_target_titles[candidate_id],
+                    )
+                    for candidate_id, candidate_version in sorted(
+                        candidate_versions.items()
+                    )
+                ],
             )
         return evidence_id
 
