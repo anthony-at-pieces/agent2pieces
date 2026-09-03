@@ -120,6 +120,16 @@ def test_module_validation_accepts_stdlib_and_reviewed_runtime() -> None:
     )
 
 
+def test_module_validation_accepts_reviewed_pywin32_roots() -> None:
+    manifest = load_manifest(MANIFEST)
+
+    validate_module_names(
+        ["pywin32_system32", "win32con", "win32evtlogutil", "winerror"],
+        manifest,
+        "win32",
+    )
+
+
 def test_binary_validation_rejects_readline() -> None:
     manifest = load_manifest(MANIFEST)
 
@@ -251,6 +261,12 @@ def test_binary_validation_maps_reviewed_runtime_and_extensions() -> None:
     )
 
     assert components == ("CPython", "OpenSSL")
+
+
+def test_binary_validation_maps_linux_libuuid() -> None:
+    manifest = load_manifest(MANIFEST)
+
+    assert validate_binary_entries(["libuuid.so.1"], manifest, "linux") == ("libuuid",)
 
 
 @pytest.mark.parametrize(
