@@ -335,6 +335,14 @@ def test_spec_excludes_known_development_and_copyleft_payloads() -> None:
         assert f'"{module}"' in spec
 
 
+def test_spec_excludes_windows_universal_crt_system_dlls() -> None:
+    spec = (ROOT / "agent2pieces.spec").read_text(encoding="utf-8")
+
+    assert 'sys.platform == "win32"' in spec
+    assert 'startswith("api-ms-win-")' in spec
+    assert '== "ucrtbase.dll"' in spec
+
+
 def test_manifest_has_native_rules_for_every_release_platform() -> None:
     manifest = load_manifest(MANIFEST)
 

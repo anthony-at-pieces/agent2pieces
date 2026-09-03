@@ -1,5 +1,7 @@
 # ruff: noqa: F821
 
+import sys
+
 from PyInstaller.utils.hooks import collect_submodules
 
 hiddenimports = sorted(
@@ -63,6 +65,14 @@ a = Analysis(
     noarchive=False,
     optimize=0,
 )
+if sys.platform == "win32":
+    filtered_binaries = []
+    for entry in a.binaries:
+        binary_name = entry[0].replace("\\", "/").rsplit("/", 1)[-1].lower()
+        if binary_name.startswith("api-ms-win-") or binary_name == "ucrtbase.dll":
+            continue
+        filtered_binaries.append(entry)
+    a.binaries = filtered_binaries
 pyz = PYZ(a.pure)
 
 exe = EXE(
