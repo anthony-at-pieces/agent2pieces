@@ -141,6 +141,15 @@ def load_manifest(path: Path = DEFAULT_MANIFEST) -> dict[str, Any]:
                         f"{context}.{field} must be a non-empty string"
                     )
             _strings(component.get("patterns"), context=f"{context}.patterns")
+            if "archive_patterns" in component:
+                archive_patterns = _strings(
+                    component["archive_patterns"],
+                    context=f"{context}.archive_patterns",
+                )
+                if len(set(archive_patterns)) != len(archive_patterns):
+                    raise ReleaseArtifactError(
+                        f"{context}.archive_patterns contains duplicate values"
+                    )
             if "covered_by" not in component:
                 _strings(
                     component.get("license_candidates"),
@@ -268,7 +277,13 @@ def validate_archive_entries(
     internal_names = {"PYZ.pyz", "base_library.zip", "cli", "struct"}
     internal_prefixes = ("pyi_", "pyiboot", "pyimod")
     unknown: list[str] = []
+    ambiguous: list[str] = []
     violations: list[str] = []
+    native = _object(manifest["native_libraries"], context="native_libraries")
+    native_components = _objects(
+        native.get(target_platform),
+        context=f"native_libraries.{target_platform}",
+    )
     for name in archive_entries:
         if _is_binary_entry(name):
             continue
@@ -286,15 +301,35 @@ def validate_archive_entries(
         canonical_root = _canonical_distribution_name(root)
         if canonical_root in forbidden:
             violations.append(name)
-        elif (
-            root not in allowed_roots
-            and not root.startswith("_sysconfigdata_")
-            and not (root.startswith("python") and "/lib-dynload/" in name)
+            continue
+        if (
+            root in allowed_roots
+            or root.startswith("_sysconfigdata_")
+            or (root.startswith("python") and "/lib-dynload/" in name)
         ):
+            continue
+        owners = sorted(
+            {
+                str(component["component"])
+                for component in native_components
+                if any(
+                    _matches_binary_pattern(name, str(pattern))
+                    for pattern in component.get("archive_patterns", [])
+                )
+            }
+        )
+        if not owners:
             unknown.append(name)
+        elif len(owners) > 1:
+            ambiguous.append(f"{name} ({', '.join(owners)})")
     if violations:
         raise ReleaseArtifactError(
             "forbidden archive entries: " + ", ".join(sorted(violations)[:20])
+        )
+    if ambiguous:
+        raise ReleaseArtifactError(
+            "ambiguous bundled archive ownership: "
+            + ", ".join(sorted(ambiguous)[:20])
         )
     if unknown:
         raise ReleaseArtifactError(

@@ -141,6 +141,45 @@ def test_archive_validation_accepts_reviewed_data_and_pyinstaller_runtime() -> N
     )
 
 
+def test_archive_validation_maps_cpython_macos_framework_metadata() -> None:
+    manifest = load_manifest(MANIFEST)
+
+    validate_archive_entries(
+        [
+            "Python.framework/Resources",
+            "Python.framework/Versions/3.12/Resources/Info.plist",
+            "Python.framework/Versions/Current",
+        ],
+        manifest,
+        "darwin",
+    )
+
+
+def test_archive_validation_rejects_unreviewed_macos_framework_metadata() -> None:
+    manifest = load_manifest(MANIFEST)
+
+    with pytest.raises(ReleaseArtifactError, match="unmapped archive entries"):
+        validate_archive_entries(
+            ["Python.framework/Versions/3.12/Resources/private.txt"],
+            manifest,
+            "darwin",
+        )
+
+
+def test_archive_validation_rejects_ambiguous_native_metadata_owner() -> None:
+    manifest = load_manifest(MANIFEST)
+    manifest["native_libraries"]["darwin"][1]["archive_patterns"] = [
+        "Python.framework/Resources"
+    ]
+
+    with pytest.raises(ReleaseArtifactError, match="ambiguous bundled archive ownership"):
+        validate_archive_entries(
+            ["Python.framework/Resources"],
+            manifest,
+            "darwin",
+        )
+
+
 def test_binary_validation_rejects_unmapped_native_library() -> None:
     manifest = load_manifest(MANIFEST)
 

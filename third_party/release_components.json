@@ -67,7 +67,7 @@
       {"component": "zlib", "patterns": ["libz.so.*"], "license": "Zlib", "source": "https://zlib.net/", "license_candidates": ["/usr/share/doc/zlib1g/copyright"]}
     ],
     "darwin": [
-      {"component": "CPython", "patterns": ["libpython*.dylib", "Python", "python*/lib-dynload/*.so"], "license": "PSF-2.0", "source": "https://www.python.org/", "covered_by": "CPython"},
+      {"component": "CPython", "patterns": ["libpython*.dylib", "Python", "python*/lib-dynload/*.so"], "archive_patterns": ["Python.framework/Resources", "Python.framework/Versions/3.12/Resources/Info.plist", "Python.framework/Versions/Current"], "license": "PSF-2.0", "source": "https://www.python.org/", "covered_by": "CPython"},
       {"component": "CPython bundled OpenSSL", "patterns": ["libcrypto*.dylib", "libssl*.dylib"], "license": "See CPython LICENSE", "source": "https://www.openssl.org/", "covered_by": "CPython"},
       {"component": "CPython bundled support libraries", "patterns": ["libbz2*.dylib", "libffi*.dylib", "liblzma*.dylib", "libsqlite3*.dylib", "libz*.dylib"], "license": "See CPython LICENSE", "source": "https://www.python.org/", "covered_by": "CPython"}
     ],
