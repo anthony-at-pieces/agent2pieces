@@ -284,7 +284,8 @@ def validate_archive_entries(
         native.get(target_platform),
         context=f"native_libraries.{target_platform}",
     )
-    for name in archive_entries:
+    for original_name in archive_entries:
+        name = original_name.replace("\\", "/")
         if _is_binary_entry(name):
             continue
         root = name.split("/", 1)[0]
@@ -414,7 +415,7 @@ def inspect_artifact(
     except Exception as error:
         raise ReleaseArtifactError(f"cannot inspect native artifact: {error}") from error
     module_names = tuple(sorted(str(name) for name in embedded.toc))
-    archive_entries = tuple(sorted(str(name) for name in archive.toc))
+    archive_entries = tuple(sorted(str(name).replace("\\", "/") for name in archive.toc))
     binary_entries = tuple(name for name in archive_entries if _is_binary_entry(name))
     validate_module_names(module_names, manifest, target_platform)
     validate_archive_entries(archive_entries, manifest, target_platform)

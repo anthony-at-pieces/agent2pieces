@@ -162,6 +162,19 @@ def test_archive_validation_accepts_reviewed_data_and_pyinstaller_runtime() -> N
     )
 
 
+def test_archive_validation_accepts_windows_path_separators() -> None:
+    manifest = load_manifest(MANIFEST)
+
+    validate_archive_entries(
+        [
+            r"agent2pieces\static\app.js",
+            r"attrs-26.1.0.dist-info\METADATA",
+        ],
+        manifest,
+        "win32",
+    )
+
+
 def test_archive_validation_maps_cpython_macos_framework_metadata() -> None:
     manifest = load_manifest(MANIFEST)
 
