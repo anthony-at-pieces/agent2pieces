@@ -208,7 +208,8 @@ def test_packaged_scan_and_local_static_server_smoke(
             assert asset_status == 200
             assert asset_body
     finally:
-        if process.poll() is None:
+        terminated_by_test = process.poll() is None
+        if terminated_by_test:
             if os.name == "nt":
                 process.terminate()
             else:
@@ -218,7 +219,10 @@ def test_packaged_scan_and_local_static_server_smoke(
         except subprocess.TimeoutExpired:
             process.kill()
             process.wait(timeout=5)
-    assert process.returncode in {0, 130, -signal.SIGINT}
+    expected_return_codes = {0, 130, -signal.SIGINT}
+    if os.name == "nt" and terminated_by_test:
+        expected_return_codes.add(1)
+    assert process.returncode in expected_return_codes
 
 
 def _expected_platform_archive(artifact_dir: Path) -> Path:
