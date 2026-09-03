@@ -494,7 +494,13 @@ def _distribution_component(
 
 
 def _candidate_path(value: str) -> Path:
-    return Path(value.format(base_prefix=sys.base_prefix, prefix=sys.prefix))
+    return Path(
+        value.format(
+            base_prefix=sys.base_prefix,
+            prefix=sys.prefix,
+            python_major_minor=f"{sys.version_info.major}.{sys.version_info.minor}",
+        )
+    )
 
 
 def _path_component(

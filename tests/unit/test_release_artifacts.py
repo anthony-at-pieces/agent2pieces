@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT))
 
 from scripts.release_artifacts import (  # noqa: E402
     ReleaseArtifactError,
+    _candidate_path,
     allowed_module_roots,
     load_manifest,
     validate_archive_entries,
@@ -20,6 +21,16 @@ from scripts.release_artifacts import (  # noqa: E402
 )
 
 MANIFEST = ROOT / "third_party" / "release_components.json"
+
+
+def test_license_candidate_expands_python_major_minor() -> None:
+    candidate = _candidate_path(
+        "/Applications/Python {python_major_minor}/License.rtf"
+    )
+
+    assert candidate == Path(
+        f"/Applications/Python {sys.version_info.major}.{sys.version_info.minor}/License.rtf"
+    )
 
 
 def test_pyinstaller_has_a_separate_build_dependency_group() -> None:

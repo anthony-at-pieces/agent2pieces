@@ -44,6 +44,8 @@
       "license_candidates": [
         "{base_prefix}/LICENSE.txt",
         "{base_prefix}/LICENSE",
+        "{base_prefix}/Resources/License.rtf",
+        "/Applications/Python {python_major_minor}/License.rtf",
         "/usr/share/doc/python3.12/copyright"
       ]
     },
