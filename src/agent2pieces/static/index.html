@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Agent2Pieces</title>
+  <link rel="stylesheet" href="__APP_STYLE__">
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <p class="eyebrow">Local memory review</p>
+      <h1>Agent2Pieces</h1>
+    </div>
+    <div class="connection-card" aria-live="polite">
+      <strong id="connection-status">Checking Pieces</strong>
+      <span id="create-memory-capability">Write tool unknown</span>
+      <span id="search-capability">Search tool unknown</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="toolbar panel" aria-label="Inventory controls">
+      <div class="button-row">
+        <button id="scan-button" type="button">Scan sources</button>
+        <button id="rescan-button" type="button" class="secondary">Rescan</button>
+        <button id="duplicate-check" type="button" class="secondary">Check Pieces</button>
+      </div>
+      <p id="scan-counts" class="status-line" aria-live="polite">No scan run in this process.</p>
+      <div class="filters">
+        <label>Agent
+          <select id="agent-filter">
+            <option value="">All agents</option>
+            <option value="codex">Codex</option>
+            <option value="claude">Claude Code</option>
+            <option value="hermes">Hermes</option>
+          </select>
+        </label>
+        <label>Project
+          <select id="project-filter"><option value="">All projects</option></select>
+        </label>
+        <label>Duplicate state
+          <select id="duplicate-filter">
+            <option value="">All states</option>
+            <option value="exact">Exact</option>
+            <option value="likely">Likely</option>
+            <option value="possible">Possible</option>
+            <option value="distinct">Distinct</option>
+          </select>
+        </label>
+        <label>Security state
+          <select id="security-filter">
+            <option value="">All states</option>
+            <option value="blocked">Blocked</option>
+            <option value="warning">Warning</option>
+            <option value="overridden">Overridden</option>
+            <option value="clean">Clean</option>
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <details class="panel settings-panel">
+      <summary>Source and Pieces settings</summary>
+      <p class="status-line">Saved roots are scanned read-only. Paths must be absolute.</p>
+      <div id="source-root-list" class="source-root-list"></div>
+      <div class="settings-grid">
+        <label>Agent
+          <select id="new-root-agent">
+            <option value="codex">Codex</option>
+            <option value="claude">Claude Code</option>
+            <option value="hermes">Hermes</option>
+          </select>
+        </label>
+        <label>Additional source root
+          <input id="new-root-path" type="text" autocomplete="off" placeholder="Absolute path">
+        </label>
+        <button id="add-root" type="button" class="secondary">Add root</button>
+      </div>
+      <label>Pieces MCP base URL
+        <input id="pieces-base-url" type="text" autocomplete="off">
+      </label>
+      <p id="pieces-effective-endpoint" class="status-line"></p>
+      <div class="button-row"><button id="save-settings" type="button">Save settings</button></div>
+    </details>
+
+    <section class="workspace">
+      <aside class="panel candidate-column" aria-label="Candidates">
+        <div class="section-heading">
+          <h2>Candidates</h2>
+          <span id="candidate-total">0</span>
+        </div>
+        <div id="candidate-list" class="candidate-list"></div>
+      </aside>
+
+      <section class="panel review-column" aria-label="Selected candidate">
+        <div class="section-heading">
+          <h2>Review</h2>
+          <span id="candidate-state">Select a candidate</span>
+        </div>
+        <form id="candidate-form">
+          <label>Approved title
+            <input id="candidate-title" type="text" maxlength="240" autocomplete="off">
+          </label>
+          <label>Approved Markdown
+            <textarea id="candidate-body" rows="14"></textarea>
+          </label>
+          <label>External links, one per line
+            <textarea id="candidate-links" rows="3"></textarea>
+          </label>
+          <label>Project scope
+            <input id="candidate-project" type="text" maxlength="512" autocomplete="off">
+          </label>
+          <div class="button-row">
+            <button id="save-candidate" type="submit">Save edits</button>
+            <button id="approve-candidate" type="button" class="positive">Approve</button>
+            <button id="exclude-candidate" type="button" class="danger">Exclude</button>
+          </div>
+        </form>
+
+        <section class="preview" aria-label="Escaped preview">
+          <h3 id="preview-title">Preview</h3>
+          <pre id="preview-body"></pre>
+        </section>
+
+        <section id="safety-findings" class="subpanel">
+          <h3>Safety findings</h3>
+          <div id="finding-list"></div>
+          <label class="check-row"><input id="finding-acknowledgement" type="checkbox"> I reviewed every listed finding.</label>
+          <label>Override reason
+            <textarea id="finding-reason" rows="2"></textarea>
+          </label>
+          <button id="override-findings" type="button" class="secondary">Override selected findings</button>
+        </section>
+
+        <section id="changed-source" class="subpanel">
+          <h3>Changed source</h3>
+          <div class="diff-columns">
+            <div><h4>Prior approved body</h4><pre id="prior-body"></pre></div>
+            <div><h4>Current body</h4><pre id="current-body"></pre></div>
+          </div>
+          <div id="diff-hunks"></div>
+        </section>
+
+        <section id="duplicate-evidence" class="subpanel">
+          <div class="section-heading"><h3>Duplicate evidence</h3><span id="duplicate-verdict">Not checked</span></div>
+          <div id="duplicate-warnings" class="warning-list" role="status"></div>
+          <div id="duplicate-evidence-list"></div>
+          <div id="duplicate-group">
+            <label>Group representative
+              <select id="group-representative"></select>
+            </label>
+            <div class="button-row">
+              <button id="create-group" type="button" class="secondary">Create group</button>
+              <button id="leave-group" type="button" class="secondary">Leave group</button>
+              <button id="set-representative" type="button" class="secondary">Set representative</button>
+            </div>
+          </div>
+        </section>
+      </section>
+    </section>
+
+    <section class="panel apply-panel">
+      <div>
+        <h2>Apply approved memories</h2>
+        <p>Every write is checked against the displayed candidate version and payload hash.</p>
+      </div>
+      <button id="apply-button" type="button" class="positive">Review Apply</button>
+    </section>
+
+    <section class="panel" aria-label="Import progress">
+      <div class="section-heading"><h2>Import progress</h2><span id="import-progress">No active import</span></div>
+      <div id="import-items"></div>
+      <div class="button-row">
+        <button id="resume-recheck" type="button" class="secondary">Recheck marker</button>
+        <button id="resume-retry" type="button" class="secondary">Retry write</button>
+        <button id="resume-skip" type="button" class="secondary">Skip item</button>
+      </div>
+      <label class="check-row"><input id="duplicate-write-risk-acknowledgement" type="checkbox"> I accept the duplicate-write risk for this retry.</label>
+    </section>
+  </main>
+
+  <dialog id="apply-dialog" aria-labelledby="apply-dialog-title">
+    <form method="dialog">
+      <h2 id="apply-dialog-title">Confirm Apply</h2>
+      <dl>
+        <dt>Pieces endpoint</dt><dd id="apply-endpoint"></dd>
+        <dt>Selected write count</dt><dd id="apply-count"></dd>
+        <dt>Context hash</dt><dd id="apply-context-hash"></dd>
+      </dl>
+      <div id="apply-confirmation"></div>
+      <label id="remote-risk-row" class="check-row">
+        <input id="remote-risk-acknowledgement" type="checkbox">
+        Local ledger loss or replacement can hide an earlier remote write.
+      </label>
+      <div class="button-row dialog-actions">
+        <button id="apply-confirm" type="button" class="positive">Apply now</button>
+        <button id="apply-cancel" type="button" class="secondary">Cancel</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="live-message" class="live-message" role="status" aria-live="polite"></div>
+  <script defer src="__APP_SCRIPT__"></script>
+</body>
+</html>

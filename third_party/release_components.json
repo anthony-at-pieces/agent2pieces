@@ -1,0 +1,120 @@
+{
+  "schema_version": 1,
+  "python_distributions": [
+    {"name": "annotated-doc", "license": "MIT", "source": "https://github.com/fastapi/annotated-doc", "modules": ["annotated_doc"]},
+    {"name": "annotated-types", "license": "MIT", "source": "https://github.com/annotated-types/annotated-types", "modules": ["annotated_types"]},
+    {"name": "anyio", "license": "MIT", "source": "https://github.com/agronholm/anyio", "modules": ["anyio"]},
+    {"name": "attrs", "license": "MIT", "source": "https://github.com/python-attrs/attrs", "modules": ["attr", "attrs"]},
+    {"name": "cffi", "license": "MIT-0", "source": "https://foss.heptapod.net/pypy/cffi", "modules": ["_cffi_backend", "cffi"], "binary_patterns": {"linux": ["_cffi_backend.*.so"], "darwin": ["_cffi_backend.*.so"], "win32": ["_cffi_backend.*.pyd"]}},
+    {"name": "click", "license": "BSD-3-Clause", "source": "https://github.com/pallets/click", "modules": ["click"]},
+    {"name": "cryptography", "license": "Apache-2.0 OR BSD-3-Clause", "source": "https://github.com/pyca/cryptography", "modules": ["cryptography"], "binary_patterns": {"linux": ["cryptography/hazmat/bindings/_rust.abi3.so"], "darwin": ["cryptography/hazmat/bindings/_rust.abi3.so"], "win32": ["cryptography/hazmat/bindings/_rust.pyd"]}},
+    {"name": "fastapi", "license": "MIT", "source": "https://github.com/fastapi/fastapi", "modules": ["fastapi"]},
+    {"name": "h11", "license": "MIT", "source": "https://github.com/python-hyper/h11", "modules": ["h11"]},
+    {"name": "httpcore2", "license": "BSD-3-Clause", "source": "https://github.com/encode/httpcore", "modules": ["httpcore2"]},
+    {"name": "httpx2", "license": "BSD-3-Clause", "source": "https://github.com/encode/httpx", "modules": ["httpx2"]},
+    {"name": "idna", "license": "BSD-3-Clause", "source": "https://github.com/kjd/idna", "modules": ["idna"]},
+    {"name": "jinja2", "license": "BSD-3-Clause", "source": "https://github.com/pallets/jinja", "modules": ["jinja2"]},
+    {"name": "jsonschema", "license": "MIT", "source": "https://github.com/python-jsonschema/jsonschema", "modules": ["jsonschema"]},
+    {"name": "jsonschema-specifications", "license": "MIT", "source": "https://github.com/python-jsonschema/jsonschema-specifications", "modules": ["jsonschema_specifications"]},
+    {"name": "markupsafe", "license": "BSD-3-Clause", "source": "https://github.com/pallets/markupsafe", "modules": ["markupsafe"], "binary_patterns": {"linux": ["markupsafe/_speedups.*.so"], "darwin": ["markupsafe/_speedups.*.so"], "win32": ["markupsafe/_speedups.*.pyd"]}},
+    {"name": "mcp", "license": "MIT", "source": "https://github.com/modelcontextprotocol/python-sdk", "modules": ["mcp"]},
+    {"name": "mcp-types", "license": "MIT", "source": "https://github.com/modelcontextprotocol/python-sdk", "modules": ["mcp_types"]},
+    {"name": "opentelemetry-api", "license": "Apache-2.0", "source": "https://github.com/open-telemetry/opentelemetry-python", "modules": ["opentelemetry"]},
+    {"name": "platformdirs", "license": "MIT", "source": "https://github.com/tox-dev/platformdirs", "modules": ["platformdirs"]},
+    {"name": "pycparser", "license": "BSD-3-Clause", "source": "https://github.com/eliben/pycparser", "modules": ["pycparser"]},
+    {"name": "pydantic", "license": "MIT", "source": "https://github.com/pydantic/pydantic", "modules": ["pydantic"]},
+    {"name": "pydantic-core", "license": "MIT", "source": "https://github.com/pydantic/pydantic-core", "modules": ["pydantic_core"], "binary_patterns": {"linux": ["pydantic_core/_pydantic_core.*.so"], "darwin": ["pydantic_core/_pydantic_core.*.so"], "win32": ["pydantic_core/_pydantic_core.*.pyd"]}},
+    {"name": "pyjwt", "license": "MIT", "source": "https://github.com/jpadilla/pyjwt", "modules": ["jwt"]},
+    {"name": "python-multipart", "license": "Apache-2.0", "source": "https://github.com/Kludex/python-multipart", "modules": ["multipart", "python_multipart"]},
+    {"name": "pywin32", "license": "PSF-2.0", "source": "https://github.com/mhammond/pywin32", "modules": ["_win32sysloader", "pythoncom", "pywintypes", "win32", "win32com", "win32comext"], "platforms": ["win32"], "binary_patterns": {"win32": ["_win32sysloader.pyd", "win32api.pyd", "win32job.pyd", "isapi/PyISAPI_loader.dll", "pythonwin/dde.pyd", "pythonwin/scintilla.dll", "pythonwin/win32ui.pyd", "pythonwin/win32uiole.pyd", "pywin32_system32/pythoncom*.dll", "pywin32_system32/pywintypes*.dll", "win32/_win32sysloader.pyd", "win32/_winxptheme.pyd", "win32/mmapfile.pyd", "win32/odbc.pyd", "win32/perfmon.pyd", "win32/perfmondata.dll", "win32/servicemanager.pyd", "win32/timer.pyd", "win32/win32*.pyd", "win32comext/*/*.pyd"]}},
+    {"name": "referencing", "license": "MIT", "source": "https://github.com/python-jsonschema/referencing", "modules": ["referencing"]},
+    {"name": "rpds-py", "license": "MIT", "source": "https://github.com/crate-py/rpds", "modules": ["rpds"], "binary_patterns": {"linux": ["rpds/rpds.*.so"], "darwin": ["rpds/rpds.*.so"], "win32": ["rpds/rpds.*.pyd"]}},
+    {"name": "sse-starlette", "license": "BSD-3-Clause", "source": "https://github.com/sysid/sse-starlette", "modules": ["sse_starlette"]},
+    {"name": "starlette", "license": "BSD-3-Clause", "source": "https://github.com/Kludex/starlette", "modules": ["starlette"]},
+    {"name": "truststore", "license": "MIT", "source": "https://github.com/sethmlarson/truststore", "modules": ["truststore"]},
+    {"name": "typing-extensions", "license": "PSF-2.0", "source": "https://github.com/python/typing_extensions", "modules": ["typing_extensions"]},
+    {"name": "typing-inspection", "license": "MIT", "source": "https://github.com/pydantic/typing-inspection", "modules": ["typing_inspection"]},
+    {"name": "uvicorn", "license": "BSD-3-Clause", "source": "https://github.com/Kludex/uvicorn", "modules": ["uvicorn"]}
+  ],
+  "build_components": [
+    {
+      "name": "CPython",
+      "license": "PSF-2.0",
+      "source": "https://github.com/python/cpython",
+      "license_candidates": [
+        "{base_prefix}/LICENSE.txt",
+        "{base_prefix}/LICENSE",
+        "/usr/share/doc/python3.12/copyright"
+      ]
+    },
+    {
+      "name": "PyInstaller bootloader and runtime hooks",
+      "license": "GPL-2.0-or-later WITH Bootloader-exception AND Apache-2.0",
+      "source": "https://github.com/pyinstaller/pyinstaller",
+      "distribution": "pyinstaller"
+    }
+  ],
+  "native_libraries": {
+    "linux": [
+      {"component": "CPython", "patterns": ["python", "libpython*.so*", "python*/lib-dynload/*.so"], "license": "PSF-2.0", "source": "https://www.python.org/", "covered_by": "CPython"},
+      {"component": "bzip2", "patterns": ["libbz2.so.*"], "license": "bzip2-1.0.6", "source": "https://sourceware.org/bzip2/", "license_candidates": ["/usr/share/doc/libbz2-1.0/copyright"]},
+      {"component": "Expat", "patterns": ["libexpat.so.*"], "license": "MIT", "source": "https://github.com/libexpat/libexpat", "license_candidates": ["/usr/share/doc/libexpat1/copyright"]},
+      {"component": "libffi", "patterns": ["libffi.so.*"], "license": "MIT", "source": "https://github.com/libffi/libffi", "license_candidates": ["/usr/share/doc/libffi8/copyright"]},
+      {"component": "GCC runtime", "patterns": ["libgcc_s.so.*"], "license": "GPL-3.0-or-later WITH GCC-exception-3.1", "source": "https://gcc.gnu.org/", "license_candidates": ["/usr/share/doc/libgcc-s1/copyright", "/usr/share/doc/gcc-14-base/copyright"]},
+      {"component": "OpenSSL", "patterns": ["libcrypto.so.*", "libssl.so.*"], "license": "Apache-2.0", "source": "https://www.openssl.org/", "license_candidates": ["/usr/share/doc/libssl3t64/copyright", "/usr/share/doc/libssl3/copyright"]},
+      {"component": "SQLite", "patterns": ["libsqlite3.so.*"], "license": "blessing", "source": "https://www.sqlite.org/", "license_candidates": ["/usr/share/doc/libsqlite3-0/copyright"]},
+      {"component": "XZ Utils", "patterns": ["liblzma.so.*"], "license": "0BSD AND LGPL-2.1-or-later AND GPL-2.0-or-later", "source": "https://tukaani.org/xz/", "license_candidates": ["/usr/share/doc/liblzma5/copyright"]},
+      {"component": "zlib", "patterns": ["libz.so.*"], "license": "Zlib", "source": "https://zlib.net/", "license_candidates": ["/usr/share/doc/zlib1g/copyright"]}
+    ],
+    "darwin": [
+      {"component": "CPython", "patterns": ["libpython*.dylib", "Python", "python*/lib-dynload/*.so"], "license": "PSF-2.0", "source": "https://www.python.org/", "covered_by": "CPython"},
+      {"component": "CPython bundled OpenSSL", "patterns": ["libcrypto*.dylib", "libssl*.dylib"], "license": "See CPython LICENSE", "source": "https://www.openssl.org/", "covered_by": "CPython"},
+      {"component": "CPython bundled support libraries", "patterns": ["libbz2*.dylib", "libffi*.dylib", "liblzma*.dylib", "libsqlite3*.dylib", "libz*.dylib"], "license": "See CPython LICENSE", "source": "https://www.python.org/", "covered_by": "CPython"}
+    ],
+    "win32": [
+      {"component": "CPython", "patterns": ["python[0-9]*.dll", "vcruntime*.dll", "_asyncio.pyd", "_bz2.pyd", "_ctypes.pyd", "_decimal.pyd", "_elementtree.pyd", "_hashlib.pyd", "_lzma.pyd", "_msi.pyd", "_multiprocessing.pyd", "_overlapped.pyd", "_queue.pyd", "_socket.pyd", "_sqlite3.pyd", "_ssl.pyd", "_uuid.pyd", "_wmi.pyd", "_zoneinfo.pyd", "pyexpat.pyd", "select.pyd", "unicodedata.pyd", "winsound.pyd"], "license": "PSF-2.0", "source": "https://www.python.org/", "covered_by": "CPython"},
+      {"component": "CPython bundled OpenSSL", "patterns": ["libcrypto*.dll", "libssl*.dll"], "license": "See CPython LICENSE", "source": "https://www.openssl.org/", "covered_by": "CPython"},
+      {"component": "CPython bundled support libraries", "patterns": ["libbz2*.dll", "libexpat*.dll", "libffi*.dll", "liblzma*.dll", "sqlite3.dll", "zlib*.dll"], "license": "See CPython LICENSE", "source": "https://www.python.org/", "covered_by": "CPython"}
+    ]
+  },
+  "forbidden_module_prefixes": [
+    "PyInstaller",
+    "_pyinstaller_hooks_contrib",
+    "_pytest",
+    "_readline",
+    "altgraph",
+    "anyio.pytest_plugin",
+    "certifi",
+    "charset_normalizer",
+    "greenlet",
+    "httpcore",
+    "httpx",
+    "iniconfig",
+    "mypy",
+    "mypy_extensions",
+    "packaging",
+    "pathspec",
+    "pefile",
+    "playwright",
+    "pluggy",
+    "pyee",
+    "pygments",
+    "pytest",
+    "pytest_asyncio",
+    "pytest_base_url",
+    "pytest_playwright",
+    "python_slugify",
+    "pywin32_ctypes",
+    "requests",
+    "ruff",
+    "slugify",
+    "setuptools",
+    "text_unidecode",
+    "urllib3"
+  ],
+  "forbidden_binary_patterns": [
+    "*libreadline*",
+    "*readline*.pyd",
+    "*readline*.so"
+  ]
+}

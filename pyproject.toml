@@ -1,0 +1,66 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agent2pieces"
+version = "0.1.0"
+description = "Review and import curated coding-agent memories into Pieces"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Anthony Maio" }]
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "fastapi>=0.115,<1",
+    "jinja2>=3.1,<4",
+    "mcp>=2,<3",
+    "platformdirs>=4.3,<5",
+    "pydantic>=2.10,<3",
+    "uvicorn>=0.34,<1",
+]
+
+[project.urls]
+Homepage = "https://github.com/anthony-at-pieces/agent2pieces"
+Issues = "https://github.com/anthony-at-pieces/agent2pieces/issues"
+Source = "https://github.com/anthony-at-pieces/agent2pieces"
+
+[project.scripts]
+agent2pieces = "agent2pieces.cli:entrypoint"
+
+[dependency-groups]
+build = [
+    "pyinstaller>=6.12,<7",
+]
+dev = [
+    { include-group = "build" },
+    "httpx>=0.28,<1",
+    "mypy>=1.14,<2",
+    "pytest>=8.3,<9",
+    "pytest-asyncio>=0.25,<2",
+    "pytest-playwright>=0.7,<1",
+    "ruff>=0.9,<1",
+]
+
+[tool.pytest.ini_options]
+addopts = "-ra --capture=sys --strict-config --strict-markers --import-mode=importlib"
+pythonpath = ["src", "tests"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+packages = ["agent2pieces"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agent2pieces"]
+
+[tool.hatch.build.targets.sdist]
+only-include = ["src/agent2pieces"]
