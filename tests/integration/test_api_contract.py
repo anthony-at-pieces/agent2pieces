@@ -568,6 +568,198 @@ def test_duplicate_check_group_default_override_approve_and_exclude(api: ApiHarn
     assert excluded.json()["group"]["status"] == "excluded"
 
 
+@pytest.mark.parametrize(
+    ("action", "invalid_path_candidate", "error_code"),
+    [
+        pytest.param("approve", "stale_member", "candidate_version_conflict"),
+        pytest.param("exclude", "stale_member", "candidate_version_conflict"),
+        pytest.param("approve", "nonmember", "invalid_candidate_state"),
+        pytest.param("exclude", "nonmember", "invalid_candidate_state"),
+    ],
+)
+def test_group_decisions_bind_the_path_candidate_and_version(
+    api: ApiHarness,
+    action: str,
+    invalid_path_candidate: str,
+    error_code: str,
+) -> None:
+    shared_body = "Persist the dispatch boundary before entering the remote SDK call."
+    first = add_candidate(
+        api.ledger,
+        payload=CandidatePayload(title="Dispatch boundary", markdown_body=shared_body),
+        source_key="first.md",
+        source_path="/codex/first.md",
+    )
+    second = add_candidate(
+        api.ledger,
+        payload=CandidatePayload(title="Dispatch boundary", markdown_body=shared_body),
+        source_key="second.md",
+        source_path="/codex/second.md",
+    )
+    unrelated = add_candidate(
+        api.ledger,
+        payload=CandidatePayload(
+            title="Separate decision",
+            markdown_body="Keep this candidate outside the duplicate group.",
+        ),
+        source_key="unrelated.md",
+        source_path="/codex/unrelated.md",
+    )
+    checked = api.client.post(
+        "/api/duplicates/check-pieces",
+        headers=api.mutation_headers(),
+        json={
+            "candidate_ids": [first.candidate_id, second.candidate_id],
+            "candidate_versions": {
+                first.candidate_id: first.version,
+                second.candidate_id: second.version,
+            },
+        },
+    )
+    assert checked.status_code == 200
+    suggestion = checked.json()["suggested_groups"][0]
+    created = api.client.patch(
+        f"/api/candidates/{first.candidate_id}",
+        headers=api.mutation_headers(),
+        json={
+            "version": first.version,
+            "action": "group_create",
+            "duplicate_check_id": checked.json()["check_id"],
+            "evidence_ids": suggestion["evidence_ids"],
+        },
+    )
+    assert created.status_code == 200
+    group = created.json()["group"]
+
+    path_candidate = first if invalid_path_candidate == "stale_member" else unrelated
+    request_version = (
+        path_candidate.version + 1
+        if invalid_path_candidate == "stale_member"
+        else path_candidate.version
+    )
+    response = api.client.patch(
+        f"/api/candidates/{path_candidate.candidate_id}",
+        headers=api.mutation_headers(),
+        json={
+            "version": request_version,
+            "action": action,
+            "target": "group",
+            "group_id": group["group_id"],
+            "group_version": group["version"],
+        },
+    )
+
+    assert_error(response, 409, error_code)
+    persisted_group = api.ledger.connection.execute(
+        "SELECT status, version FROM review_groups WHERE group_id = ?",
+        (group["group_id"],),
+    ).fetchone()
+    assert (persisted_group["status"], persisted_group["version"]) == (
+        "draft",
+        group["version"],
+    )
+    member_statuses = api.ledger.connection.execute(
+        "SELECT DISTINCT status FROM candidates WHERE group_id = ?",
+        (group["group_id"],),
+    ).fetchall()
+    assert [row["status"] for row in member_statuses] == ["pending"]
+
+
+def test_candidate_reload_retains_duplicate_evidence_for_both_local_matches(
+    api: ApiHarness,
+) -> None:
+    shared_body = "Persist the dispatch boundary before entering the remote SDK call."
+    first = add_candidate(
+        api.ledger,
+        payload=CandidatePayload(
+            title="Dispatch boundary summary",
+            markdown_body=shared_body,
+        ),
+        source_key="first.md",
+        source_path="/codex/first.md",
+    )
+    second = add_candidate(
+        api.ledger,
+        payload=CandidatePayload(
+            title="Dispatch boundary decision",
+            markdown_body=shared_body,
+        ),
+        source_key="second.md",
+        source_path="/codex/second.md",
+    )
+
+    checked = api.client.post(
+        "/api/duplicates/check-pieces",
+        headers=api.mutation_headers(),
+        json={
+            "candidate_ids": [first.candidate_id, second.candidate_id],
+            "candidate_versions": {
+                first.candidate_id: first.version,
+                second.candidate_id: second.version,
+            },
+        },
+    )
+
+    assert checked.status_code == 200
+    checked_results = {
+        result["candidate_id"]: result["evidence"] for result in checked.json()["results"]
+    }
+    assert set(checked_results) == {first.candidate_id, second.candidate_id}
+    assert all(checked_results.values())
+
+    reloaded_evidence: dict[str, list[dict[str, Any]]] = {}
+    for candidate, source_key in ((first, "first.md"), (second, "second.md")):
+        response = api.client.get(
+            "/api/candidates",
+            params={"q": source_key, "page_size": 10},
+        )
+        assert response.status_code == 200
+        assert response.json()["total"] == 1
+        item = response.json()["items"][0]
+        assert item["candidate_id"] == candidate.candidate_id
+        reloaded_evidence[candidate.candidate_id] = item["duplicate"]["evidence"]
+
+    assert {
+        candidate_id
+        for candidate_id, evidence in reloaded_evidence.items()
+        if evidence
+    } == {first.candidate_id, second.candidate_id}
+    assert {
+        candidate_id: [
+            (evidence["target_key"], evidence["target_title"])
+            for evidence in evidence_items
+        ]
+        for candidate_id, evidence_items in reloaded_evidence.items()
+    } == {
+        first.candidate_id: [(second.candidate_id, second.payload.title)],
+        second.candidate_id: [(first.candidate_id, first.payload.title)],
+    }
+
+    edited = api.client.patch(
+        f"/api/candidates/{second.candidate_id}",
+        headers=api.mutation_headers(),
+        json={
+            "version": second.version,
+            "action": "save",
+            "title": "Changed dispatch boundary decision",
+            "markdown_body": shared_body,
+            "external_links": [],
+            "project_scope": "",
+        },
+    )
+    assert edited.status_code == 200
+
+    unchanged = api.client.get(
+        "/api/candidates",
+        params={"q": "first.md", "page_size": 10},
+    )
+    assert unchanged.status_code == 200
+    assert unchanged.json()["total"] == 1
+    duplicate = unchanged.json()["items"][0]["duplicate"]
+    assert duplicate["evidence"] == []
+    assert duplicate["verdict"] == "distinct"
+
+
 def test_duplicate_check_rejects_stale_versions_and_caps_batch(api: ApiHarness) -> None:
     candidate = add_candidate(
         api.ledger,

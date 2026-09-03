@@ -313,6 +313,12 @@ function renderDiff(candidate) {
 
 function renderDuplicateEvidence(candidate) {
   element("duplicate-verdict").textContent = candidate.duplicate.verdict;
+  const hasGroup = Boolean(candidate.group.group_id);
+  element("duplicate-group-status").textContent = hasGroup
+    ? "Group status: " + candidate.group.status + " | version " + candidate.group.version
+    : "No duplicate group.";
+  element("approve-candidate").textContent = hasGroup ? "Approve group" : "Approve";
+  element("exclude-candidate").textContent = hasGroup ? "Exclude group" : "Exclude";
   const list = element("duplicate-evidence-list");
   clear(list);
   const evidence = candidate.duplicate.evidence || [];
@@ -453,6 +459,22 @@ async function saveCandidate(event) {
 }
 
 async function simpleCandidateAction(action) {
+  if (state.pendingMutation) {
+    await state.pendingMutation;
+  }
+  if (!state.current) {
+    return;
+  }
+  const group = state.current.group;
+  if (group.group_id) {
+    await mutateCandidate(action, {
+      target: "group",
+      group_id: group.group_id,
+      group_version: group.version,
+    });
+    announce("Group " + action + " completed.");
+    return;
+  }
   await mutateCandidate(action, {target: "candidate"});
   announce("Candidate " + action + " completed.");
 }

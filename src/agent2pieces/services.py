@@ -732,6 +732,9 @@ class ReviewService:
             candidate_version=records[0].version,
         )
         candidates = tuple(self._as_dedupe_candidate(record) for record in records)
+        checked_versions = {
+            record.candidate_id: record.version for record in records
+        }
         local_evidence: list[LocalEvidence] = []
         evidence_by_candidate: dict[str, list[str]] = {
             candidate.candidate_id: [] for candidate in candidates
@@ -742,8 +745,20 @@ class ReviewService:
                 continue
             evidence_id = self._ledger.add_duplicate_evidence(
                 check_id=check_id,
+                candidate_versions={
+                    left.candidate_id: checked_versions[left.candidate_id],
+                    right.candidate_id: checked_versions[right.candidate_id],
+                },
                 target_kind="candidate",
                 target_key=right.candidate_id,
+                candidate_target_keys={
+                    left.candidate_id: right.candidate_id,
+                    right.candidate_id: left.candidate_id,
+                },
+                candidate_target_titles={
+                    left.candidate_id: right.title,
+                    right.candidate_id: left.title,
+                },
                 classification=score.classification.value,
                 rule_id=score.rule_id,
                 cosine=score.cosine,
@@ -794,6 +809,11 @@ class ReviewService:
                 for rank, match in enumerate(remote.matches, start=1):
                     evidence_id = self._ledger.add_duplicate_evidence(
                         check_id=check_id,
+                        candidate_versions={
+                            candidate.candidate_id: checked_versions[
+                                candidate.candidate_id
+                            ]
+                        },
                         target_kind="annotation",
                         target_key=match.annotation_id,
                         classification=match.classification,
@@ -1073,6 +1093,8 @@ class ReviewService:
         expected_version: int,
         action: Literal["set_representative", "approve", "exclude"],
         representative_candidate_id: str | None = None,
+        acting_candidate_id: str | None = None,
+        expected_candidate_version: int | None = None,
     ) -> ReviewGroupRecord:
         group = self._ledger._get_review_group(group_id)
         if group.version != expected_version:
@@ -1118,7 +1140,20 @@ class ReviewService:
                         ),
                     )
             return changed_group
+        if acting_candidate_id is None or expected_candidate_version is None:
+            raise InvalidStateError("acting candidate and version are required")
         with self._ledger.transaction() as connection:
+            acting_candidate = connection.execute(
+                "SELECT version, group_id FROM candidates WHERE candidate_id = ?",
+                (acting_candidate_id,),
+            ).fetchone()
+            if (
+                acting_candidate is None
+                or int(acting_candidate["version"]) != expected_candidate_version
+            ):
+                raise OptimisticConflictError("candidate version is stale")
+            if acting_candidate["group_id"] != group_id:
+                raise InvalidStateError("candidate is not a group member")
             changed = connection.execute(
                 "UPDATE review_groups SET status = ?, version = version + 1, updated_at = ? "
                 "WHERE group_id = ? AND version = ?",

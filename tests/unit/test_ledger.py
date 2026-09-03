@@ -84,12 +84,15 @@ def test_initialize_is_idempotent_and_enforces_connection_policy(tmp_path: Path)
     migrations = first.connection.execute(
         "SELECT version, COUNT(*) FROM schema_migrations GROUP BY version"
     ).fetchall()
-    assert migrations == [(1, 1), (2, 1)]
+    assert migrations == [(1, 1), (2, 1), (3, 1)]
     first.close()
 
     reopened = Ledger(path)
     reopened.initialize()
-    assert reopened.connection.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0] == 2
+    assert (
+        reopened.connection.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0]
+        == 3
+    )
     reopened.close()
 
 
@@ -141,7 +144,7 @@ def test_initialize_migrates_v1_import_context_without_resuming_unsafe_job(
     try:
         assert migrated.connection.execute(
             "SELECT version FROM schema_migrations ORDER BY version"
-        ).fetchall() == [(1,), (2,)]
+        ).fetchall() == [(1,), (2,), (3,)]
         job = migrated.get_import_job(job_id)
         assert job.state is ImportJobState.FAILED
         assert job.pieces_endpoint == "unknown"
@@ -155,6 +158,136 @@ def test_initialize_migrates_v1_import_context_without_resuming_unsafe_job(
             str(row[1])
             for row in migrated.connection.execute("PRAGMA table_info(import_attempts)")
         } >= {"pieces_endpoint"}
+    finally:
+        migrated.close()
+
+
+def test_initialize_does_not_invent_legacy_local_pair_evidence_ownership(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "legacy.sqlite3"
+    migration_root = (
+        Path(__file__).resolve().parents[2] / "src" / "agent2pieces" / "migrations"
+    )
+    connection = sqlite3.connect(path)
+    connection.executescript(
+        (migration_root / "001_initial.sql").read_text(encoding="utf-8")
+    )
+    connection.executescript(
+        (migration_root / "002_import_context.sql").read_text(encoding="utf-8")
+    )
+    connection.execute(
+        "CREATE TABLE schema_migrations "
+        "(version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL)"
+    )
+    connection.executemany(
+        "INSERT INTO schema_migrations(version, applied_at) VALUES (?, ?)",
+        [(1, "2026-09-01T00:00:00Z"), (2, "2026-09-02T00:00:00Z")],
+    )
+    root_id = str(uuid.uuid4())
+    first_revision_id = str(uuid.uuid4())
+    second_revision_id = str(uuid.uuid4())
+    first_candidate_id = str(uuid.uuid4())
+    second_candidate_id = str(uuid.uuid4())
+    check_id = str(uuid.uuid4())
+    evidence_id = str(uuid.uuid4())
+    connection.execute(
+        "INSERT INTO source_roots "
+        "(root_id, agent, lexical_path, resolved_path, enabled, is_default, created_at) "
+        "VALUES (?, ?, ?, ?, 1, 1, ?)",
+        (
+            root_id,
+            SourceAgent.CODEX,
+            "/memory/codex",
+            "/memory/codex",
+            "2026-09-01T00:00:00Z",
+        ),
+    )
+    connection.executemany(
+        "INSERT INTO source_revisions "
+        "(revision_id, agent, root_id, source_key, source_path, source_hash, "
+        "candidate_input_hash, first_observed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        [
+            (
+                first_revision_id,
+                SourceAgent.CODEX,
+                root_id,
+                "first.md",
+                "/memory/codex/first.md",
+                "a" * 64,
+                "b" * 64,
+                "2026-09-01T00:00:00Z",
+            ),
+            (
+                second_revision_id,
+                SourceAgent.CODEX,
+                root_id,
+                "second.md",
+                "/memory/codex/second.md",
+                "e" * 64,
+                "f" * 64,
+                "2026-09-01T00:00:00Z",
+            ),
+        ],
+    )
+    payload_json = CandidatePayload(
+        title="Legacy evidence", markdown_body="Legacy body."
+    ).model_dump_json()
+    connection.executemany(
+        "INSERT INTO candidates "
+        "(candidate_id, revision_id, status, version, original_payload_json, "
+        "current_payload_json, payload_hash, import_id, created_at, updated_at) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [
+            (
+                first_candidate_id,
+                first_revision_id,
+                CandidateStatus.PENDING,
+                3,
+                payload_json,
+                payload_json,
+                "c" * 64,
+                "d" * 26,
+                "2026-09-01T00:00:00Z",
+                "2026-09-01T00:00:00Z",
+            ),
+            (
+                second_candidate_id,
+                second_revision_id,
+                CandidateStatus.PENDING,
+                1,
+                payload_json,
+                payload_json,
+                "g" * 64,
+                "h" * 26,
+                "2026-09-01T00:00:00Z",
+                "2026-09-01T00:00:00Z",
+            ),
+        ],
+    )
+    connection.execute(
+        "INSERT INTO duplicate_checks "
+        "(check_id, candidate_id, candidate_version, coverage, started_at) "
+        "VALUES (?, ?, 2, 'local', ?)",
+        (check_id, first_candidate_id, "2026-09-01T00:00:00Z"),
+    )
+    connection.execute(
+        "INSERT INTO duplicate_evidence "
+        "(evidence_id, check_id, target_kind, target_key, classification, rule_id) "
+        "VALUES (?, ?, 'candidate', ?, 'likely', 'body_cosine')",
+        (evidence_id, check_id, second_candidate_id),
+    )
+    connection.commit()
+    connection.close()
+
+    migrated = Ledger(path)
+    migrated.initialize()
+    try:
+        owners = migrated.connection.execute(
+            "SELECT evidence_id, candidate_id, candidate_version "
+            "FROM duplicate_evidence_candidates"
+        ).fetchall()
+        assert owners == []
     finally:
         migrated.close()
 
@@ -389,6 +522,7 @@ def test_group_updates_are_optimistic_and_retain_evidence(
     check_id = ledger.create_duplicate_check(candidate_id=first_id, candidate_version=1)
     evidence_id = ledger.add_duplicate_evidence(
         check_id=check_id,
+        candidate_versions={first_id: 1, second.candidate_id: 1},
         target_kind="candidate",
         target_key=second.candidate_id,
         classification="likely",

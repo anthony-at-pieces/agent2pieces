@@ -459,17 +459,26 @@ def _candidate_json(
                 "hunks": hunks,
             }
     evidence_rows = ledger.connection.execute(
-        "SELECT e.* FROM duplicate_evidence e JOIN duplicate_checks d "
-        "ON d.check_id = e.check_id WHERE d.candidate_id = ? "
-        "AND d.candidate_version = ? "
+        "SELECT e.*, owner.target_key AS owner_target_key, "
+        "owner.target_title AS owner_target_title "
+        "FROM duplicate_evidence_candidates owner "
+        "JOIN duplicate_evidence e ON e.evidence_id = owner.evidence_id "
+        "JOIN duplicate_checks d ON d.check_id = e.check_id "
+        "WHERE owner.candidate_id = ? AND owner.candidate_version = ? "
+        "AND NOT EXISTS ("
+        "SELECT 1 FROM duplicate_evidence_candidates peer "
+        "JOIN candidates current ON current.candidate_id = peer.candidate_id "
+        "WHERE peer.evidence_id = owner.evidence_id "
+        "AND current.version != peer.candidate_version"
+        ") "
         "ORDER BY d.started_at DESC, e.evidence_id LIMIT 50",
         (candidate.candidate_id, candidate.version),
     ).fetchall()
     evidence = [
         {
             "target_kind": str(row["target_kind"]),
-            "target_key": str(row["target_key"]),
-            "target_title": row["target_title"],
+            "target_key": str(row["owner_target_key"]),
+            "target_title": row["owner_target_title"],
             "target_excerpt": row["target_excerpt"],
             "classification": str(row["classification"]),
             "rule_id": str(row["rule_id"]),
@@ -967,6 +976,14 @@ def create_api_router(dependencies: ApiDependencies) -> APIRouter:
                     representative_candidate_id=(
                         candidate_id if request.action == "set_representative" else None
                     ),
+                    acting_candidate_id=(
+                        candidate_id if request.action in {"approve", "exclude"} else None
+                    ),
+                    expected_candidate_version=(
+                        request.version
+                        if request.action in {"approve", "exclude"}
+                        else None
+                    ),
                 )
                 current = dependencies.ledger.get_candidate(candidate_id)
                 result = _candidate_json(dependencies.ledger, current)
@@ -1021,10 +1038,14 @@ def create_api_router(dependencies: ApiDependencies) -> APIRouter:
             placeholders = ",".join("?" for _ in evidence_ids)
             rows = (
                 dependencies.ledger.connection.execute(
-                    "SELECT * FROM duplicate_evidence WHERE evidence_id IN ("
+                    "SELECT e.*, owner.target_key AS owner_target_key "
+                    "FROM duplicate_evidence_candidates owner "
+                    "JOIN duplicate_evidence e ON e.evidence_id = owner.evidence_id "
+                    "WHERE owner.candidate_id = ? AND owner.candidate_version = ? "
+                    "AND e.evidence_id IN ("
                     + placeholders
-                    + ") ORDER BY evidence_id",
-                    evidence_ids,
+                    + ") ORDER BY e.evidence_id",
+                    (candidate_id, versions[candidate_id], *evidence_ids),
                 ).fetchall()
                 if evidence_ids
                 else []
@@ -1035,7 +1056,7 @@ def create_api_router(dependencies: ApiDependencies) -> APIRouter:
                     "classification": str(row["classification"]),
                     "rule_id": str(row["rule_id"]),
                     "target_kind": str(row["target_kind"]),
-                    "target_key": str(row["target_key"]),
+                    "target_key": str(row["owner_target_key"]),
                 }
                 for row in rows
             ]
